@@ -88,7 +88,8 @@
 <div class="card">
   <div class="card-title"><span id="connDot" class="dot"></span>Server</div>
   <div id="connStatus" class="status"></div>
-  <input type="url" id="serverUrl" placeholder="http://192.168.1.x:7878">
+  <input type="text" id="deviceName" placeholder="Device name (e.g. Android Phone)" style="margin-bottom:6px">
+  <input type="url" id="serverUrl" placeholder="http://192.168.1.x:7878 or Render URL">
   <button class="btn sm" id="connectBtn">Connect &amp; Test</button>
 </div>
 
@@ -126,6 +127,7 @@
 
 <script>
 const KEY_SERVER = 'tt_server';
+const KEY_DEVICE = 'tt_device';
 const KEY_LOG    = 'tt_log_' + new Date().toDateString();
 
 let timerInterval = null;
@@ -135,6 +137,8 @@ let timerAppName  = '';
 // ── storage ────────────────────────────────────────────────────────────────
 function getServer() { return localStorage.getItem(KEY_SERVER) || ''; }
 function setServer(v) { localStorage.setItem(KEY_SERVER, v); }
+function getDevice() { return localStorage.getItem(KEY_DEVICE) || 'Android Phone'; }
+function setDevice(v) { localStorage.setItem(KEY_DEVICE, v); }
 
 function getLog() {
   try { return JSON.parse(localStorage.getItem(KEY_LOG) || '[]'); } catch { return []; }
@@ -169,9 +173,11 @@ async function testConnection(server) {
 }
 
 document.getElementById('connectBtn').addEventListener('click', async () => {
-  const url = document.getElementById('serverUrl').value.trim().replace(/\/$/, '');
+  const url    = document.getElementById('serverUrl').value.trim().replace(/\/$/, '');
+  const device = document.getElementById('deviceName').value.trim();
   if (!url) return;
   setServer(url);
+  if (device) setDevice(device);
   const ok = await testConnection(url);
   const dot = document.getElementById('connDot');
   const st  = document.getElementById('connStatus');
@@ -220,7 +226,7 @@ document.getElementById('stopBtn').addEventListener('click', async () => {
       await fetch(`${server}/api/phone`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ entries: [entry] }),
+        body:    JSON.stringify({ entries: [entry], device: getDevice() }),
       });
     } catch { /* queue locally */ }
   }
@@ -268,7 +274,8 @@ document.querySelectorAll('.tab').forEach(btn => {
 (async () => {
   const saved = getServer();
   if (saved) {
-    document.getElementById('serverUrl').value = saved;
+    document.getElementById('serverUrl').value  = saved;
+    document.getElementById('deviceName').value = getDevice();
     const ok = await testConnection(saved);
     document.getElementById('connDot').className = 'dot ' + (ok ? 'ok' : 'err');
     if (ok) {

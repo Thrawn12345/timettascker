@@ -105,6 +105,46 @@
       50%       { opacity: 0.4; }
     }
 
+    /* ── device bar ── */
+    .device-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 40px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .device-bar::-webkit-scrollbar { display: none; }
+    .device-label {
+      font-size: 11px;
+      color: var(--dim);
+      flex-shrink: 0;
+      margin-right: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .device-btn {
+      padding: 3px 12px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .device-btn:hover  { color: var(--text); border-color: var(--muted); }
+    .device-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
     main {
       flex: 1;
       padding: 28px;
@@ -315,6 +355,12 @@
     <div class="refresh-dot" title="Auto-refreshing every 30s"></div>
   </nav>
 
+  <!-- device filter bar -->
+  <div class="device-bar" id="deviceBar">
+    <span class="device-label">Device:</span>
+    <button class="device-btn active" data-device="">All Devices</button>
+  </div>
+
   <main>
 
     <!-- summary cards -->
@@ -399,6 +445,7 @@
 <script>
 // ── state ──────────────────────────────────────────────────────────────────
 let period = 'day';
+let activeDevice = '';   // '' = all devices
 let timelineChart = null;
 let donutChart = null;
 
@@ -614,28 +661,46 @@ function renderOverall(stats) {
   }).join('');
 }
 
+// ── device bar ─────────────────────────────────────────────────────────────
+async function refreshDeviceBar() {
+  try {
+    const devices = await fetch('/api/devices').then(r => r.json());
+    const bar = document.getElementById('deviceBar');
+    // Remove old device buttons (keep label + "All Devices")
+    bar.querySelectorAll('.device-btn[data-device]:not([data-device=""])').forEach(b => b.remove());
+    devices.forEach(d => {
+      const btn = document.createElement('button');
+      btn.className   = 'device-btn' + (activeDevice === d ? ' active' : '');
+      btn.dataset.device = d;
+      btn.textContent = d;
+      bar.appendChild(btn);
+    });
+  } catch { /* server may be starting */ }
+}
+
 // ── main load ──────────────────────────────────────────────────────────────
 async function loadData() {
+  const dq = activeDevice ? `&device=${encodeURIComponent(activeDevice)}` : '';
   try {
     const [stats, timeline] = await Promise.all([
-      fetch(`/api/stats?period=${period}`).then(r => r.json()),
-      fetch(`/api/timeline?period=${period}`).then(r => r.json()),
+      fetch(`/api/stats?period=${period}${dq}`).then(r => r.json()),
+      fetch(`/api/timeline?period=${period}${dq}`).then(r => r.json()),
     ]);
 
-    const apps = stats.filter(s => s.type === 'app');
-    const tabs = stats.filter(s => s.type === 'tab');
+    const apps  = stats.filter(s => s.type === 'app');
+    const tabs  = stats.filter(s => s.type === 'tab');
     const total = stats.reduce((a, s) => a + s.total_seconds, 0);
-    const top = stats[0];
+    const top   = stats[0];
 
-    // Cards
-    document.getElementById('cardTotal').textContent    = fmt(total);
-    document.getElementById('cardPeriod').textContent   = periodLabel(period);
-    document.getElementById('cardApps').textContent     = apps.length;
-    document.getElementById('cardSites').textContent    = tabs.length;
-    document.getElementById('cardTop').textContent      = top ? top.name.slice(0, 20) : '—';
-    document.getElementById('cardTopTime').textContent  = top ? fmt(top.total_seconds) : '';
-    document.getElementById('appsCount').textContent    = apps.length;
-    document.getElementById('tabsCount').textContent    = tabs.length;
+    const deviceLabel = activeDevice ? ` · ${activeDevice}` : ' · All Devices';
+    document.getElementById('cardTotal').textContent   = fmt(total);
+    document.getElementById('cardPeriod').textContent  = periodLabel(period) + deviceLabel;
+    document.getElementById('cardApps').textContent    = apps.length;
+    document.getElementById('cardSites').textContent   = tabs.length;
+    document.getElementById('cardTop').textContent     = top ? top.name.slice(0, 20) : '—';
+    document.getElementById('cardTopTime').textContent = top ? fmt(top.total_seconds) : '';
+    document.getElementById('appsCount').textContent   = apps.length;
+    document.getElementById('tabsCount').textContent   = tabs.length;
 
     renderList('appsList', apps, 'app');
     renderList('tabsList', tabs, 'tab');
@@ -661,9 +726,20 @@ document.getElementById('periodTabs').addEventListener('click', e => {
   loadData();
 });
 
+// ── device bar clicks ──────────────────────────────────────────────────────
+document.getElementById('deviceBar').addEventListener('click', e => {
+  const btn = e.target.closest('.device-btn');
+  if (!btn) return;
+  document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeDevice = btn.dataset.device;
+  loadData();
+});
+
 // ── boot ───────────────────────────────────────────────────────────────────
+refreshDeviceBar();
 loadData();
-setInterval(loadData, 30_000);
+setInterval(() => { refreshDeviceBar(); loadData(); }, 30_000);
 </script>
 </body>
 </html>

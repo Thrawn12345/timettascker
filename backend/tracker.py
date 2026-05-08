@@ -1,4 +1,5 @@
 import os
+import socket
 import time
 import threading
 import logging
@@ -16,7 +17,8 @@ except ImportError:
 
 import database
 
-CLOUD_URL  = os.environ.get('TRACKER_SERVER', '').rstrip('/')
+CLOUD_URL   = os.environ.get('TRACKER_SERVER', '').rstrip('/')
+DEVICE_NAME = os.environ.get('DEVICE_NAME', socket.gethostname())
 
 SKIP_NAMES = {
     'python', 'python3', 'pythonw', 'cmd', 'conhost',
@@ -36,7 +38,7 @@ def _get_active_app():
         name = proc.name().lower().replace('.exe', '')
         if name in SKIP_NAMES:
             return None
-        title = win32gui.GetWindowText(hwnd)
+        title   = win32gui.GetWindowText(hwnd)
         display = proc.name().replace('.exe', '').replace('.EXE', '')
         if title and len(title) < 80 and title.lower() != display.lower():
             display = f"{display} — {title}"
@@ -48,20 +50,21 @@ def _get_active_app():
 def _save_session(name, start_time, end_time):
     if CLOUD_URL:
         threading.Thread(
-            target=_post_app_session,
+            target=_post_session,
             args=(name, start_time, end_time),
             daemon=True,
         ).start()
     else:
-        database.add_app_entry(name, start_time, end_time)
+        database.add_app_entry(name, start_time, end_time, device=DEVICE_NAME)
 
 
-def _post_app_session(name, start_time, end_time):
+def _post_session(name, start_time, end_time):
     try:
         import requests
         r = requests.post(
             f'{CLOUD_URL}/api/app',
-            json={'name': name, 'start_time': start_time, 'end_time': end_time},
+            json={'name': name, 'start_time': start_time,
+                  'end_time': end_time, 'device': DEVICE_NAME},
             timeout=5,
         )
         if not r.ok:
@@ -69,7 +72,7 @@ def _post_app_session(name, start_time, end_time):
     except Exception as e:
         logger.warning(f"Cloud POST failed ({e}), saving locally")
         try:
-            database.add_app_entry(name, start_time, end_time)
+            database.add_app_entry(name, start_time, end_time, device=DEVICE_NAME)
         except Exception:
             pass
 
@@ -80,14 +83,13 @@ class AppTracker:
         self._thread     = None
         self._current_app = None
         self._start_time  = None
-        # local-mode only (in-progress entry id so we can update it live)
-        self._entry_id   = None
+        self._entry_id    = None   # local mode only
 
     def _begin(self, name):
         self._current_app = name
         self._start_time  = time.time()
         if not CLOUD_URL:
-            self._entry_id, _ = database.insert_entry(name, 'app')
+            self._entry_id, _ = database.insert_entry(name, 'app', device=DEVICE_NAME)
 
     def _end(self):
         if not self._current_app or not self._start_time:
@@ -120,10 +122,9 @@ class AppTracker:
         self._thread  = threading.Thread(target=self._loop, daemon=True, name='AppTracker')
         self._thread.start()
         mode = f"cloud → {CLOUD_URL}" if CLOUD_URL else "local SQLite"
-        logger.info(f"Desktop app tracker started ({mode})")
+        logger.info(f"Desktop tracker started | device={DEVICE_NAME!r} | {mode}")
 
     def stop(self):
         self._running = False
         if self._thread:
             self._thread.join(timeout=3)
-        logger.info("Desktop app tracker stopped")

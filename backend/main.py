@@ -11,8 +11,9 @@ logging.basicConfig(
     datefmt='%H:%M:%S',
 )
 
+import os
 import database
-from tracker import AppTracker
+from tracker import AppTracker, DEVICE_NAME
 import server
 
 PORT = 7878
@@ -30,16 +31,23 @@ def get_lan_ip():
 
 
 def main():
-    lan_ip = get_lan_ip()
+    lan_ip   = get_lan_ip()
+    cloud    = os.environ.get('TRACKER_SERVER', '')
+    db_cloud = os.environ.get('DATABASE_URL', '')
 
     print()
-    print("  ╔══════════════════════════════════════════╗")
-    print("  ║           Time Tracker                   ║")
-    print(f"  ║  Local  → http://127.0.0.1:{PORT}           ║")
+    print("  ╔══════════════════════════════════════════════╗")
+    print("  ║             Time Tracker                     ║")
+    print(f"  ║  Device   : {DEVICE_NAME:<34}║")
+    print(f"  ║  Local    → http://127.0.0.1:{PORT}             ║")
     if lan_ip:
-        print(f"  ║  Phone  → http://{lan_ip}:{PORT}  ║")
-    print("  ║  Press Ctrl+C to stop                    ║")
-    print("  ╚══════════════════════════════════════════╝")
+        print(f"  ║  Network  → http://{lan_ip}:{PORT}       ║")
+    if db_cloud:
+        print(f"  ║  Database : Neon PostgreSQL (cloud)          ║")
+    if cloud:
+        print(f"  ║  Tracker  : POSTing to {cloud[:30]:<30}  ║")
+    print("  ║  Ctrl+C to stop                              ║")
+    print("  ╚══════════════════════════════════════════════╝")
     print()
 
     database.init_db()

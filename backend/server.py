@@ -17,6 +17,8 @@ def index():
     return send_from_directory(app.static_folder, 'index.html')
 
 
+# ── write endpoints ────────────────────────────────────────────────────────
+
 @app.route('/api/tab', methods=['POST'])
 def receive_tab():
     data = request.get_json(silent=True)
@@ -28,31 +30,15 @@ def receive_tab():
             str(data.get('url', ''))[:500],
             float(data['start_time']),
             float(data['end_time']),
+            device=str(data.get('device', 'unknown'))[:60],
         )
         return jsonify({'ok': True})
     except (KeyError, ValueError) as e:
         return jsonify({'error': str(e)}), 400
 
 
-@app.route('/api/stats')
-def stats():
-    period = request.args.get('period', 'day')
-    if period not in ('day', 'week', 'month', 'year'):
-        return jsonify({'error': 'invalid period'}), 400
-    return jsonify(database.get_stats(period))
-
-
-@app.route('/api/timeline')
-def timeline():
-    period = request.args.get('period', 'day')
-    if period not in ('day', 'week', 'month', 'year'):
-        return jsonify({'error': 'invalid period'}), 400
-    return jsonify(database.get_hourly_breakdown(period))
-
-
 @app.route('/api/app', methods=['POST'])
 def receive_app():
-    """Accept a completed desktop app session from the local tracker (cloud mode)."""
     data = request.get_json(silent=True)
     if not data:
         return jsonify({'error': 'bad request'}), 400
@@ -61,6 +47,7 @@ def receive_app():
             str(data.get('name', 'Unknown'))[:120],
             float(data['start_time']),
             float(data['end_time']),
+            device=str(data.get('device', 'unknown'))[:60],
         )
         return jsonify({'ok': True})
     except (KeyError, ValueError) as e:
@@ -69,18 +56,18 @@ def receive_app():
 
 @app.route('/api/phone', methods=['POST'])
 def receive_phone():
-    """Accept app-usage data from the Android companion app."""
     data = request.get_json(silent=True)
     if not data or not isinstance(data.get('entries'), list):
         return jsonify({'error': 'bad request'}), 400
+    device = str(data.get('device', 'Phone'))[:60]
     count = 0
     for e in data['entries']:
         try:
-            database.add_tab_entry(
+            database.add_app_entry(
                 str(e.get('name', 'Unknown'))[:120],
-                'android://' + str(e.get('package', ''))[:120],
                 float(e['start_time']),
                 float(e['end_time']),
+                device=device,
             )
             count += 1
         except (KeyError, ValueError):
@@ -88,9 +75,35 @@ def receive_phone():
     return jsonify({'ok': True, 'saved': count})
 
 
+# ── read endpoints ─────────────────────────────────────────────────────────
+
+@app.route('/api/devices')
+def devices():
+    return jsonify(database.get_devices())
+
+
+@app.route('/api/stats')
+def stats():
+    period = request.args.get('period', 'day')
+    device = request.args.get('device') or None
+    if period not in ('day', 'week', 'month', 'year'):
+        return jsonify({'error': 'invalid period'}), 400
+    return jsonify(database.get_stats(period, device))
+
+
+@app.route('/api/timeline')
+def timeline():
+    period = request.args.get('period', 'day')
+    device = request.args.get('device') or None
+    if period not in ('day', 'week', 'month', 'year'):
+        return jsonify({'error': 'invalid period'}), 400
+    return jsonify(database.get_hourly_breakdown(period, device))
+
+
 @app.route('/api/summary')
 def summary():
-    return jsonify({'today_seconds': database.get_total_today()})
+    device = request.args.get('device') or None
+    return jsonify({'today_seconds': database.get_total_today(device)})
 
 
 @app.errorhandler(404)

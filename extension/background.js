@@ -7,6 +7,11 @@ async function getServer() {
   return serverUrl.replace(/\/$/, '');
 }
 
+async function getDevice() {
+  const { deviceName } = await chrome.storage.sync.get({ deviceName: '' });
+  return deviceName || 'Browser';
+}
+
 // ── URL normalisation ──────────────────────────────────────────────────────
 // Always store the bare hostname (e.g. "youtube.com"), never a path or title.
 function siteName(url) {
@@ -91,7 +96,7 @@ function endAudibleSession(tabId) {
 
 async function flush() {
   if (queue.length === 0) return;
-  const server = await getServer();
+  const [server, device] = await Promise.all([getServer(), getDevice()]);
   const batch  = queue.splice(0);
   const failed = [];
   for (const entry of batch) {
@@ -99,7 +104,7 @@ async function flush() {
       const res = await fetch(`${server}/api/tab`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(entry),
+        body:    JSON.stringify({ ...entry, device }),
       });
       if (!res.ok) failed.push(entry);
     } catch {

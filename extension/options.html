@@ -6,49 +6,33 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: #0f0f1a;
-      color: #d8d8f0;
-      padding: 24px;
-      min-width: 380px;
+      background: #0f0f1a; color: #d8d8f0;
+      padding: 24px; min-width: 380px;
     }
     h1 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 20px; }
-    label { display: block; font-size: 12px; color: #9090b0; margin-bottom: 6px; }
+    label { display: block; font-size: 12px; color: #9090b0; margin-bottom: 6px; margin-top: 14px; }
+    label:first-of-type { margin-top: 0; }
     input[type=text] {
-      width: 100%;
-      padding: 9px 12px;
-      background: #1a1a2e;
-      border: 1px solid #2a2a50;
-      border-radius: 6px;
-      color: #e0e0f0;
-      font-size: 13px;
-      outline: none;
+      width: 100%; padding: 9px 12px;
+      background: #1a1a2e; border: 1px solid #2a2a50;
+      border-radius: 6px; color: #e0e0f0; font-size: 13px; outline: none;
     }
     input[type=text]:focus { border-color: #6366f1; }
-    .hint { font-size: 11px; color: #50506a; margin-top: 6px; }
+    .hint { font-size: 11px; color: #50506a; margin-top: 5px; }
     .hint code { color: #a5b4fc; background: #1e1e3f; padding: 1px 5px; border-radius: 3px; }
     .row { display: flex; gap: 8px; margin-top: 16px; align-items: center; }
     button {
-      padding: 8px 18px;
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
+      padding: 8px 18px; background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #fff; border: none; border-radius: 6px;
+      cursor: pointer; font-size: 13px; font-weight: 500;
     }
     button:hover { opacity: 0.88; }
     #status { font-size: 12px; color: #4ade80; display: none; }
     .divider { border: none; border-top: 1px solid #1f1f35; margin: 22px 0; }
     .section-title { font-size: 12px; font-weight: 600; color: #9090b0; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
     .info-box {
-      background: #1a1a2e;
-      border: 1px solid #2a2a50;
-      border-radius: 8px;
-      padding: 12px 14px;
-      font-size: 12px;
-      color: #9090b0;
-      line-height: 1.7;
+      background: #1a1a2e; border: 1px solid #2a2a50; border-radius: 8px;
+      padding: 12px 14px; font-size: 12px; color: #9090b0; line-height: 1.7;
     }
     .info-box strong { color: #c8c8e8; }
   </style>
@@ -56,26 +40,33 @@
 <body>
   <h1>⚙ Time Tracker Settings</h1>
 
+  <label for="deviceName">Device Name</label>
+  <input type="text" id="deviceName" placeholder="e.g. Home PC, Work Laptop, iPhone">
+  <p class="hint">This name appears as a separate pool in the dashboard. Each browser/device should have a unique name.</p>
+
   <label for="serverUrl">Server URL</label>
   <input type="text" id="serverUrl" placeholder="http://127.0.0.1:7878">
   <p class="hint">
-    Default: <code>http://127.0.0.1:7878</code> (same PC)<br>
-    Phone on same WiFi: use your PC's local IP, e.g. <code>http://192.168.1.x:7878</code>
+    Local: <code>http://127.0.0.1:7878</code> &nbsp;·&nbsp;
+    Cloud: your Render URL &nbsp;·&nbsp;
+    LAN: <code>http://192.168.x.x:7878</code>
   </p>
 
   <div class="row">
     <button id="saveBtn">Save</button>
-    <button id="resetBtn" style="background:#1e1e3f;border:1px solid #2a2a50">Reset to default</button>
+    <button id="resetBtn" style="background:#1e1e3f;border:1px solid #2a2a50">Reset</button>
     <span id="status">Saved ✓</span>
   </div>
 
   <hr class="divider">
 
-  <div class="section-title">Phone Setup</div>
+  <div class="section-title">Phone Setup (Android)</div>
   <div class="info-box">
-    <strong>Chrome on Android:</strong> Install <strong>Kiwi Browser</strong> from the Play Store — it supports Chrome extensions. Load this extension the same way (Developer mode → Load unpacked), then set the server URL to your PC's IP above.<br><br>
-    <strong>View dashboard on phone:</strong> Open <code>http://&lt;PC-IP&gt;:7878</code> in any phone browser while on the same WiFi.<br><br>
-    <strong>Android app tracking:</strong> Run the companion app on your phone and point it at the same server URL.
+    <strong>Step 1 — Install Kiwi Browser</strong> (Play Store). It's the only Android browser that supports Chrome extensions.<br><br>
+    <strong>Step 2 — Load the extension:</strong><br>
+    Open Kiwi → Menu → Extensions → Enable Developer Mode → Load Unpacked → select the <code>extension/</code> folder (copy it to your phone first via USB or Google Drive).<br><br>
+    <strong>Step 3 — Configure:</strong> Open the extension settings in Kiwi, set Device Name to something like <code>Android Phone</code> and Server URL to your Render cloud URL or your PC's LAN IP.<br><br>
+    <strong>Manual app timer:</strong> Open <code>android/tracker.html</code> in any phone browser, add to Home Screen for quick access.
   </div>
 
   <script src="options.js"></script>
