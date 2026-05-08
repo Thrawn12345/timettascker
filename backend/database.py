@@ -163,7 +163,7 @@ def _period_since(period):
 def get_stats(period):
     since = _period_since(period)
     sql = f'''
-        SELECT name, type, url,
+        SELECT name, type, MAX(url) AS url,
                SUM(duration) AS total_seconds,
                COUNT(*)      AS sessions
         FROM time_entries

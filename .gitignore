@@ -11,6 +11,9 @@ build/
 venv/
 env/
 
+# Secrets — never commit
+.env
+
 # Database (local data — don't commit)
 backend/timetracker.db
 
