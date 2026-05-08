@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Time Tracker — Phone</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a14; --card: #191928; --border: #1f1f35;
+      --accent: #6366f1; --green: #34d399; --text: #e2e2f4; --muted: #9090b0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; padding: 16px; padding-bottom: 32px;
+    }
+    h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; margin-bottom: 14px;
+    }
+    .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 10px; }
+
+    input[type=text], input[type=url] {
+      width: 100%; padding: 10px 12px;
+      background: #0f0f1a; border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 14px; outline: none;
+      margin-bottom: 8px;
+    }
+    input:focus { border-color: var(--accent); }
+
+    .btn {
+      display: block; width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #fff; border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      margin-top: 6px;
+    }
+    .btn.green { background: linear-gradient(135deg, #059669, #34d399); }
+    .btn.sm { padding: 8px; font-size: 13px; font-weight: 500; margin-top: 4px; }
+    .btn:active { opacity: 0.8; }
+
+    .status {
+      font-size: 12px; padding: 8px 12px;
+      border-radius: 6px; margin-bottom: 10px;
+      display: none;
+    }
+    .status.ok    { background: #34d39920; color: var(--green); display: block; }
+    .status.error { background: #f8717120; color: #f87171;      display: block; }
+
+    .timer-display {
+      font-size: 48px; font-weight: 700; text-align: center;
+      color: var(--accent); letter-spacing: -2px;
+      padding: 16px 0 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .timer-app { text-align: center; font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+
+    .log-list { display: flex; flex-direction: column; gap: 6px; }
+    .log-entry {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .log-entry:last-child { border-bottom: none; }
+    .log-name { flex: 1; color: var(--text); }
+    .log-time { color: var(--accent); font-weight: 600; font-size: 12px; }
+
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #555; margin-right: 6px; vertical-align: middle; }
+    .dot.ok { background: var(--green); box-shadow: 0 0 5px var(--green); }
+    .dot.err { background: #f87171; }
+
+    .tabs { display: flex; gap: 2px; background: #0f0f1a; border-radius: 8px; padding: 3px; margin-bottom: 14px; }
+    .tab { flex: 1; padding: 7px; border: none; border-radius: 6px; background: transparent; color: var(--muted); font-size: 13px; cursor: pointer; }
+    .tab.active { background: var(--accent); color: #fff; }
+  </style>
+</head>
+<body>
+
+<h1>⏱ Time Tracker</h1>
+<p class="sub">Phone companion — add to home screen for quick access</p>
+
+<!-- Server config -->
+<div class="card">
+  <div class="card-title"><span id="connDot" class="dot"></span>Server</div>
+  <div id="connStatus" class="status"></div>
+  <input type="url" id="serverUrl" placeholder="http://192.168.1.x:7878">
+  <button class="btn sm" id="connectBtn">Connect &amp; Test</button>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" data-tab="timer">Manual Timer</button>
+  <button class="tab" data-tab="dashboard">Dashboard</button>
+</div>
+
+<!-- Manual timer tab -->
+<div id="tabTimer">
+  <div class="card">
+    <div class="card-title">Track an App / Activity</div>
+    <input type="text" id="appName" placeholder="App name (e.g. Instagram, Netflix)">
+    <div class="timer-display" id="timerDisplay">00:00:00</div>
+    <div class="timer-app" id="timerApp">—</div>
+    <button class="btn green" id="startBtn">Start Timer</button>
+    <button class="btn" id="stopBtn" style="display:none;background:#1e1e3f;border:1px solid #2a2a50">Stop &amp; Save</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Today's Log</div>
+    <div id="logList" class="log-list">
+      <div style="color:#555;font-size:13px;text-align:center;padding:12px 0">No entries yet today</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard tab (iframe) -->
+<div id="tabDashboard" style="display:none">
+  <div class="card" style="padding:0;overflow:hidden;border-radius:12px;height:70vh">
+    <iframe id="dashFrame" style="width:100%;height:100%;border:none;background:#0a0a14" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script>
+const KEY_SERVER = 'tt_server';
+const KEY_LOG    = 'tt_log_' + new Date().toDateString();
+
+let timerInterval = null;
+let timerStart    = null;
+let timerAppName  = '';
+
+// ── storage ────────────────────────────────────────────────────────────────
+function getServer() { return localStorage.getItem(KEY_SERVER) || ''; }
+function setServer(v) { localStorage.setItem(KEY_SERVER, v); }
+
+function getLog() {
+  try { return JSON.parse(localStorage.getItem(KEY_LOG) || '[]'); } catch { return []; }
+}
+function addLog(entry) {
+  const log = getLog();
+  log.push(entry);
+  localStorage.setItem(KEY_LOG, JSON.stringify(log));
+}
+
+// ── formatting ─────────────────────────────────────────────────────────────
+function fmt(s) {
+  if (s < 60)   return `${Math.round(s)}s`;
+  if (s < 3600) return `${Math.round(s / 60)}m`;
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+function fmtClock(s) {
+  const h = String(Math.floor(s / 3600)).padStart(2, '0');
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const sc = String(s % 60).padStart(2, '0');
+  return `${h}:${m}:${sc}`;
+}
+
+// ── server connection ──────────────────────────────────────────────────────
+async function testConnection(server) {
+  try {
+    const r = await fetch(`${server}/api/summary`, { signal: AbortSignal.timeout(4000) });
+    return r.ok;
+  } catch { return false; }
+}
+
+document.getElementById('connectBtn').addEventListener('click', async () => {
+  const url = document.getElementById('serverUrl').value.trim().replace(/\/$/, '');
+  if (!url) return;
+  setServer(url);
+  const ok = await testConnection(url);
+  const dot = document.getElementById('connDot');
+  const st  = document.getElementById('connStatus');
+  if (ok) {
+    dot.className = 'dot ok';
+    st.className  = 'status ok';
+    st.textContent = 'Connected ✓';
+  } else {
+    dot.className = 'dot err';
+    st.className  = 'status error';
+    st.textContent = 'Cannot reach server — check the IP and that main.py is running';
+  }
+});
+
+// ── timer ──────────────────────────────────────────────────────────────────
+document.getElementById('startBtn').addEventListener('click', () => {
+  const name = document.getElementById('appName').value.trim();
+  if (!name) { document.getElementById('appName').focus(); return; }
+  timerAppName = name;
+  timerStart   = Date.now() / 1000;
+  document.getElementById('timerApp').textContent = name;
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display  = '';
+
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor(Date.now() / 1000 - timerStart);
+    document.getElementById('timerDisplay').textContent = fmtClock(elapsed);
+  }, 1000);
+});
+
+document.getElementById('stopBtn').addEventListener('click', async () => {
+  clearInterval(timerInterval);
+  const endTime = Date.now() / 1000;
+  const entry   = { name: timerAppName, package: '', start_time: timerStart, end_time: endTime };
+
+  document.getElementById('timerDisplay').textContent = '00:00:00';
+  document.getElementById('timerApp').textContent     = '—';
+  document.getElementById('startBtn').style.display   = '';
+  document.getElementById('stopBtn').style.display    = 'none';
+  timerStart = null;
+
+  // Send to server
+  const server = getServer();
+  if (server) {
+    try {
+      await fetch(`${server}/api/phone`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ entries: [entry] }),
+      });
+    } catch { /* queue locally */ }
+  }
+
+  addLog({ name: timerAppName, duration: endTime - timerStart || (endTime - timerStart) });
+  addLog({ name: entry.name, duration: entry.end_time - entry.start_time });
+  renderLog();
+});
+
+function renderLog() {
+  const log = getLog();
+  const el  = document.getElementById('logList');
+  if (!log.length) {
+    el.innerHTML = '<div style="color:#555;font-size:13px;text-align:center;padding:12px 0">No entries yet today</div>';
+    return;
+  }
+  // Aggregate by name
+  const agg = {};
+  log.forEach(e => { agg[e.name] = (agg[e.name] || 0) + e.duration; });
+  const sorted = Object.entries(agg).sort((a, b) => b[1] - a[1]);
+  el.innerHTML = sorted.map(([name, dur]) => `
+    <div class="log-entry">
+      <span class="log-name">${name}</span>
+      <span class="log-time">${fmt(dur)}</span>
+    </div>
+  `).join('');
+}
+
+// ── tab switcher ───────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const t = btn.dataset.tab;
+    document.getElementById('tabTimer').style.display     = t === 'timer'     ? '' : 'none';
+    document.getElementById('tabDashboard').style.display = t === 'dashboard' ? '' : 'none';
+    if (t === 'dashboard') {
+      const server = getServer();
+      document.getElementById('dashFrame').src = server || 'about:blank';
+    }
+  });
+});
+
+// ── init ───────────────────────────────────────────────────────────────────
+(async () => {
+  const saved = getServer();
+  if (saved) {
+    document.getElementById('serverUrl').value = saved;
+    const ok = await testConnection(saved);
+    document.getElementById('connDot').className = 'dot ' + (ok ? 'ok' : 'err');
+    if (ok) {
+      document.getElementById('connStatus').className  = 'status ok';
+      document.getElementById('connStatus').textContent = 'Connected ✓';
+    }
+  }
+  renderLog();
+})();
+</script>
+</body>
+</html>

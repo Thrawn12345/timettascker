@@ -1,4 +1,7 @@
-const SERVER = 'http://127.0.0.1:7878';
+async function getServer() {
+  const { serverUrl } = await chrome.storage.sync.get({ serverUrl: 'http://127.0.0.1:7878' });
+  return serverUrl.replace(/\/$/, '');
+}
 
 function fmt(seconds) {
   if (seconds < 60)   return `${Math.round(seconds)}s`;
@@ -13,6 +16,7 @@ function faviconUrl(name) {
 }
 
 async function load() {
+  const server     = await getServer();
   const dot        = document.getElementById('dot');
   const statusText = document.getElementById('statusText');
   const totalDiv   = document.getElementById('totalToday');
@@ -20,14 +24,14 @@ async function load() {
 
   try {
     const [statsRes, summaryRes] = await Promise.all([
-      fetch(`${SERVER}/api/stats?period=day`),
-      fetch(`${SERVER}/api/summary`),
+      fetch(`${server}/api/stats?period=day`),
+      fetch(`${server}/api/summary`),
     ]);
 
     const stats   = await statsRes.json();
     const summary = await summaryRes.json();
 
-    dot.className        = 'dot ok';
+    dot.className          = 'dot ok';
     statusText.textContent = 'Connected — tracking active';
     statusText.className   = 'status-text ok';
 
@@ -64,8 +68,13 @@ async function load() {
   }
 }
 
-document.getElementById('openBtn').addEventListener('click', () => {
-  chrome.tabs.create({ url: `${SERVER}/` });
+document.getElementById('openBtn').addEventListener('click', async () => {
+  const server = await getServer();
+  chrome.tabs.create({ url: `${server}/` });
+});
+
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  chrome.runtime.openOptionsPage();
 });
 
 load();

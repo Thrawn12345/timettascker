@@ -3,6 +3,7 @@ import threading
 import webbrowser
 import time
 import sys
+import socket
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,13 +18,28 @@ import server
 PORT = 7878
 
 
+def get_lan_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return None
+
+
 def main():
+    lan_ip = get_lan_ip()
+
     print()
-    print("  ╔══════════════════════════════════╗")
-    print("  ║        Time Tracker              ║")
-    print(f"  ║   Dashboard → http://127.0.0.1:{PORT}  ║")
-    print("  ║   Press Ctrl+C to stop           ║")
-    print("  ╚══════════════════════════════════╝")
+    print("  ╔══════════════════════════════════════════╗")
+    print("  ║           Time Tracker                   ║")
+    print(f"  ║  Local  → http://127.0.0.1:{PORT}           ║")
+    if lan_ip:
+        print(f"  ║  Phone  → http://{lan_ip}:{PORT}  ║")
+    print("  ║  Press Ctrl+C to stop                    ║")
+    print("  ╚══════════════════════════════════════════╝")
     print()
 
     database.init_db()

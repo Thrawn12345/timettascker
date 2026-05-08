@@ -1,6 +1,11 @@
-const SERVER = 'http://127.0.0.1:7878';
+const DEFAULT_SERVER = 'http://127.0.0.1:7878';
 const FLUSH_INTERVAL_MINUTES = 1;
 const IDLE_THRESHOLD_SECONDS = 60;
+
+async function getServer() {
+  const { serverUrl } = await chrome.storage.sync.get({ serverUrl: DEFAULT_SERVER });
+  return serverUrl.replace(/\/$/, '');
+}
 
 let activeTab = null;      // { url, title }
 let activeStart = null;    // unix seconds
@@ -73,18 +78,19 @@ function snapshotSession() {
 
 async function flush() {
   if (queue.length === 0) return;
+  const server = await getServer();
   const batch = queue.splice(0, queue.length);
   const failed = [];
   for (const entry of batch) {
     try {
-      const res = await fetch(`${SERVER}/api/tab`, {
+      const res = await fetch(`${server}/api/tab`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(entry),
       });
       if (!res.ok) failed.push(entry);
     } catch {
-      failed.push(entry); // server offline — retry next cycle
+      failed.push(entry);
     }
   }
   queue.unshift(...failed);

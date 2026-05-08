@@ -11,8 +11,13 @@
     "windows"
   ],
   "host_permissions": [
-    "http://127.0.0.1:7878/*"
+    "http://127.0.0.1:7878/*",
+    "http://*/*"
   ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
   "background": {
     "service_worker": "background.js",
     "type": "module"
