@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0a14;
+      --surface:  #12121f;
+      --card:     #191928;
+      --border:   #1f1f35;
+      --accent:   #6366f1;
+      --accent2:  #a78bfa;
+      --green:    #34d399;
+      --amber:    #fbbf24;
+      --text:     #e2e2f4;
+      --muted:    #9090b0;
+      --dim:      #50506a;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── layout ── */
+    .shell { display: flex; flex-direction: column; min-height: 100vh; }
+
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .logo-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+
+    .period-tabs {
+      display: flex;
+      gap: 2px;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 3px;
+      margin-left: auto;
+    }
+
+    .tab-btn {
+      padding: 5px 16px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover   { color: var(--text); }
+    .tab-btn.active  {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px #6366f155;
+    }
+
+    .refresh-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    main {
+      flex: 1;
+      padding: 28px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ── summary cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--dim);
+      margin-bottom: 6px;
+    }
+
+    .card-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+
+    .card-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .card.accent  { border-color: #6366f140; }
+    .card.accent  .card-value { color: var(--accent2); }
+    .card.green   { border-color: #34d39940; }
+    .card.green   .card-value { color: var(--green); }
+    .card.amber   { border-color: #fbbf2440; }
+    .card.amber   .card-value { color: var(--amber); }
+
+    /* ── grid ── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-title .badge {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: #6366f120;
+      color: var(--accent2);
+      font-weight: 600;
+    }
+    .panel-title .badge.green { background: #34d39920; color: var(--green); }
+
+    /* ── chart ── */
+    .chart-wrap {
+      position: relative;
+      height: 260px;
+    }
+
+    /* ── list ── */
+    .entry-list { display: flex; flex-direction: column; gap: 4px; }
+
+    .entry-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      transition: background 0.12s;
+    }
+    .entry-row:hover { background: #ffffff08; }
+
+    .rank {
+      font-size: 11px;
+      color: var(--dim);
+      width: 18px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .entry-icon {
+      width: 22px; height: 22px;
+      border-radius: 5px;
+      background: var(--border);
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      color: var(--dim);
+    }
+    .entry-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+    .entry-info { flex: 1; min-width: 0; }
+    .entry-name {
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .entry-sessions { font-size: 11px; color: var(--dim); }
+
+    .bar-wrap {
+      width: 80px;
+      height: 5px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.5s ease;
+    }
+    .bar-fill.green { background: linear-gradient(90deg, #059669, var(--green)); }
+
+    .entry-time {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent2);
+      width: 52px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--dim);
+      font-size: 13px;
+      padding: 30px 0;
+    }
+
+    /* ── timeline panel ── */
+    .timeline-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+
+    .timeline-chart-wrap {
+      position: relative;
+      height: 160px;
+    }
+
+    /* ── footer ── */
+    footer {
+      text-align: center;
+      padding: 18px;
+      font-size: 11px;
+      color: var(--dim);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <nav>
+    <div class="logo">
+      <div class="logo-icon">⏱</div>
+      Time Tracker
+    </div>
+
+    <div class="period-tabs" id="periodTabs">
+      <button class="tab-btn active" data-period="day">Today</button>
+      <button class="tab-btn"        data-period="week">Week</button>
+      <button class="tab-btn"        data-period="month">Month</button>
+      <button class="tab-btn"        data-period="year">Year</button>
+    </div>
+
+    <div class="refresh-dot" title="Auto-refreshing every 30s"></div>
+  </nav>
+
+  <main>
+
+    <!-- summary cards -->
+    <div class="cards" id="cards">
+      <div class="card accent">
+        <div class="card-label">Total Time</div>
+        <div class="card-value" id="cardTotal">—</div>
+        <div class="card-sub" id="cardPeriod">loading…</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Apps Tracked</div>
+        <div class="card-value" id="cardApps">—</div>
+        <div class="card-sub">desktop applications</div>
+      </div>
+      <div class="card green">
+        <div class="card-label">Sites Tracked</div>
+        <div class="card-value" id="cardSites">—</div>
+        <div class="card-sub">browser tabs</div>
+      </div>
+      <div class="card amber">
+        <div class="card-label">Top Entry</div>
+        <div class="card-value" id="cardTop" style="font-size:16px;padding-top:4px">—</div>
+        <div class="card-sub" id="cardTopTime"></div>
+      </div>
+    </div>
+
+    <!-- timeline -->
+    <div class="timeline-panel">
+      <div class="panel-title">Activity Timeline</div>
+      <div class="timeline-chart-wrap">
+        <canvas id="timelineChart"></canvas>
+      </div>
+    </div>
+
+    <!-- apps + tabs side by side -->
+    <div class="grid-2">
+
+      <div class="panel">
+        <div class="panel-title">
+          Desktop Apps
+          <span class="badge" id="appsCount">0</span>
+        </div>
+        <div class="entry-list" id="appsList">
+          <div class="empty-state">No app data yet</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          Browser Tabs
+          <span class="badge green" id="tabsCount">0</span>
+        </div>
+        <div class="entry-list" id="tabsList">
+          <div class="empty-state">No tab data yet<br><small style="color:#555;font-size:11px;margin-top:4px;display:block">Install the Chrome extension to track sites</small></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- donut chart + breakdown -->
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">Apps vs Browser Split</div>
+        <div class="chart-wrap">
+          <canvas id="donutChart"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Top 10 Overall</div>
+        <div class="entry-list" id="overallList">
+          <div class="empty-state">No data yet</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>Time Tracker &nbsp;·&nbsp; Data stored locally &nbsp;·&nbsp; <span id="lastUpdated"></span></footer>
+
+</div>
+
+<script>
+// ── state ──────────────────────────────────────────────────────────────────
+let period = 'day';
+let timelineChart = null;
+let donutChart = null;
+
+// ── helpers ────────────────────────────────────────────────────────────────
+function fmt(s) {
+  if (s < 60)   return `${Math.round(s)}s`;
+  if (s < 3600) return `${Math.round(s / 60)}m`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+function faviconUrl(name) {
+  return `https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(name)}`;
+}
+
+function appInitial(name) {
+  return name.charAt(0).toUpperCase();
+}
+
+function periodLabel(p) {
+  return { day: 'today', week: 'this week', month: 'this month', year: 'this year' }[p];
+}
+
+// ── render list ────────────────────────────────────────────────────────────
+function renderList(containerId, entries, type) {
+  const el = document.getElementById(containerId);
+  if (!entries.length) {
+    el.innerHTML = `<div class="empty-state">No ${type === 'tab' ? 'browser' : 'app'} activity ${periodLabel(period)}</div>`;
+    return;
+  }
+  const max = entries[0].total_seconds;
+  el.innerHTML = entries.slice(0, 15).map((e, i) => {
+    const pct = Math.round((e.total_seconds / max) * 100);
+    const icon = type === 'tab'
+      ? `<img src="${faviconUrl(e.name)}" alt="" onerror="this.parentElement.textContent='${appInitial(e.name)}'"/>`
+      : `<span>${appInitial(e.name)}</span>`;
+    const barClass = type === 'tab' ? 'green' : '';
+    return `
+      <div class="entry-row">
+        <span class="rank">${i + 1}</span>
+        <div class="entry-icon">${icon}</div>
+        <div class="entry-info">
+          <div class="entry-name" title="${e.name}">${e.name}</div>
+          <div class="entry-sessions">${e.sessions} session${e.sessions !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="bar-wrap"><div class="bar-fill ${barClass}" style="width:${pct}%"></div></div>
+        <span class="entry-time">${fmt(e.total_seconds)}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── timeline chart ─────────────────────────────────────────────────────────
+function buildTimeline(data, p) {
+  const buckets = p === 'day' ? 24 : p === 'week' ? 7 : p === 'month' ? 30 : 12;
+  const labels  = [];
+  const appData = new Array(buckets).fill(0);
+  const tabData = new Array(buckets).fill(0);
+
+  if (p === 'day') {
+    const now = new Date();
+    for (let i = 0; i < 24; i++) {
+      const h = (now.getHours() - 23 + i + 24) % 24;
+      labels.push(`${h}:00`);
+    }
+  } else if (p === 'week') {
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const today = new Date().getDay();
+    for (let i = 0; i < 7; i++) labels.push(days[(today - 6 + i + 7) % 7]);
+  } else if (p === 'month') {
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      labels.push(`${d.getMonth()+1}/${d.getDate()}`);
+    }
+  } else {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const m = new Date().getMonth();
+    for (let i = 0; i < 12; i++) labels.push(months[(m - 11 + i + 12) % 12]);
+  }
+
+  data.forEach(d => {
+    const b = Math.min(d.bucket, buckets - 1);
+    if (d.type === 'app') appData[b] += d.total_seconds / 3600;
+    else                  tabData[b] += d.total_seconds / 3600;
+  });
+
+  return { labels, appData, tabData };
+}
+
+function renderTimeline(data) {
+  const { labels, appData, tabData } = buildTimeline(data, period);
+  const ctx = document.getElementById('timelineChart').getContext('2d');
+
+  if (timelineChart) timelineChart.destroy();
+
+  timelineChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Desktop Apps',
+          data: appData,
+          backgroundColor: '#6366f199',
+          borderColor: '#6366f1',
+          borderWidth: 1,
+          borderRadius: 3,
+        },
+        {
+          label: 'Browser',
+          data: tabData,
+          backgroundColor: '#34d39999',
+          borderColor: '#34d399',
+          borderWidth: 1,
+          borderRadius: 3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#9090b0', font: { size: 11 }, boxWidth: 10 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${(ctx.raw * 3600 < 60 ? Math.round(ctx.raw * 3600) + 's' : ctx.raw < 1 ? Math.round(ctx.raw * 60) + 'm' : ctx.raw.toFixed(1) + 'h')}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          stacked: true,
+          ticks: { color: '#50506a', font: { size: 10 }, maxRotation: 0 },
+          grid:  { color: '#ffffff08' },
+        },
+        y: {
+          stacked: true,
+          ticks: {
+            color: '#50506a', font: { size: 10 },
+            callback: v => v === 0 ? '' : v < 1 ? `${Math.round(v*60)}m` : `${v.toFixed(1)}h`,
+          },
+          grid: { color: '#ffffff08' },
+        },
+      },
+    },
+  });
+}
+
+// ── donut chart ────────────────────────────────────────────────────────────
+function renderDonut(stats) {
+  const appSec = stats.filter(s => s.type === 'app').reduce((a, s) => a + s.total_seconds, 0);
+  const tabSec = stats.filter(s => s.type === 'tab').reduce((a, s) => a + s.total_seconds, 0);
+  const ctx    = document.getElementById('donutChart').getContext('2d');
+
+  if (donutChart) donutChart.destroy();
+
+  donutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Desktop Apps', 'Browser'],
+      datasets: [{
+        data: [appSec, tabSec],
+        backgroundColor: ['#6366f1cc', '#34d399cc'],
+        borderColor:     ['#6366f1', '#34d399'],
+        borderWidth: 1,
+        hoverOffset: 6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#9090b0', font: { size: 12 }, padding: 16, boxWidth: 10 },
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)} (${appSec+tabSec ? Math.round(ctx.raw/(appSec+tabSec)*100) : 0}%)`,
+          },
+        },
+      },
+    },
+  });
+}
+
+// ── overall top 10 ─────────────────────────────────────────────────────────
+function renderOverall(stats) {
+  const top = [...stats].sort((a, b) => b.total_seconds - a.total_seconds).slice(0, 10);
+  const max = top[0]?.total_seconds || 1;
+  const el  = document.getElementById('overallList');
+  if (!top.length) { el.innerHTML = '<div class="empty-state">No data yet</div>'; return; }
+  el.innerHTML = top.map((e, i) => {
+    const pct = Math.round((e.total_seconds / max) * 100);
+    const isTab = e.type === 'tab';
+    const icon = isTab
+      ? `<img src="${faviconUrl(e.name)}" alt="" onerror="this.parentElement.textContent='${appInitial(e.name)}'"/>`
+      : `<span>${appInitial(e.name)}</span>`;
+    return `
+      <div class="entry-row">
+        <span class="rank">${i + 1}</span>
+        <div class="entry-icon">${icon}</div>
+        <div class="entry-info">
+          <div class="entry-name" title="${e.name}">${e.name}</div>
+          <div class="entry-sessions">${isTab ? 'browser' : 'app'}</div>
+        </div>
+        <div class="bar-wrap"><div class="bar-fill ${isTab ? 'green' : ''}" style="width:${pct}%"></div></div>
+        <span class="entry-time">${fmt(e.total_seconds)}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── main load ──────────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const [stats, timeline] = await Promise.all([
+      fetch(`/api/stats?period=${period}`).then(r => r.json()),
+      fetch(`/api/timeline?period=${period}`).then(r => r.json()),
+    ]);
+
+    const apps = stats.filter(s => s.type === 'app');
+    const tabs = stats.filter(s => s.type === 'tab');
+    const total = stats.reduce((a, s) => a + s.total_seconds, 0);
+    const top = stats[0];
+
+    // Cards
+    document.getElementById('cardTotal').textContent    = fmt(total);
+    document.getElementById('cardPeriod').textContent   = periodLabel(period);
+    document.getElementById('cardApps').textContent     = apps.length;
+    document.getElementById('cardSites').textContent    = tabs.length;
+    document.getElementById('cardTop').textContent      = top ? top.name.slice(0, 20) : '—';
+    document.getElementById('cardTopTime').textContent  = top ? fmt(top.total_seconds) : '';
+    document.getElementById('appsCount').textContent    = apps.length;
+    document.getElementById('tabsCount').textContent    = tabs.length;
+
+    renderList('appsList', apps, 'app');
+    renderList('tabsList', tabs, 'tab');
+    renderTimeline(timeline);
+    renderDonut(stats);
+    renderOverall(stats);
+
+    document.getElementById('lastUpdated').textContent =
+      'Last updated ' + new Date().toLocaleTimeString();
+
+  } catch (e) {
+    console.error('Failed to load data:', e);
+  }
+}
+
+// ── period tabs ────────────────────────────────────────────────────────────
+document.getElementById('periodTabs').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  period = btn.dataset.period;
+  loadData();
+});
+
+// ── boot ───────────────────────────────────────────────────────────────────
+loadData();
+setInterval(loadData, 30_000);
+</script>
+</body>
+</html>

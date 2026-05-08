@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 320px;
+      min-height: 180px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #0f0f1a;
+      color: #d8d8f0;
+      padding: 0;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e1e3f 0%, #16163a 100%);
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid #2a2a50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 0.3px;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #555;
+      transition: background 0.3s;
+    }
+    .dot.ok     { background: #4ade80; box-shadow: 0 0 6px #4ade8088; }
+    .dot.error  { background: #f87171; }
+
+    .status-text {
+      font-size: 11px;
+      color: #666;
+      padding: 6px 16px 4px;
+    }
+    .status-text.ok    { color: #4ade80; }
+    .status-text.error { color: #f87171; }
+
+    .total-today {
+      padding: 4px 16px 10px;
+      font-size: 11px;
+      color: #888;
+    }
+    .total-today strong { color: #a5b4fc; }
+
+    .list { padding: 0 0 4px; }
+
+    .list-header {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #555;
+      padding: 6px 16px 4px;
+      border-top: 1px solid #1a1a30;
+    }
+
+    .entry {
+      display: flex;
+      align-items: center;
+      padding: 7px 16px;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    .entry:hover { background: #14142a; }
+
+    .favicon {
+      width: 14px; height: 14px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      background: #2a2a50;
+    }
+
+    .entry-name {
+      flex: 1;
+      font-size: 12px;
+      color: #c8c8e8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .entry-bar-wrap {
+      width: 60px;
+      height: 4px;
+      background: #1e1e3f;
+      border-radius: 2px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .entry-bar {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #818cf8, #a78bfa);
+    }
+
+    .entry-time {
+      font-size: 11px;
+      color: #818cf8;
+      width: 42px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .empty {
+      text-align: center;
+      color: #444;
+      font-size: 12px;
+      padding: 20px 16px;
+    }
+
+    footer {
+      padding: 10px 12px;
+      border-top: 1px solid #1a1a30;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.88; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Time Tracker</h1>
+    <div id="dot" class="dot"></div>
+  </header>
+
+  <div id="statusText" class="status-text">Connecting…</div>
+  <div id="totalToday" class="total-today" style="display:none"></div>
+
+  <div class="list">
+    <div class="list-header">Today's Sites</div>
+    <div id="entries"></div>
+  </div>
+
+  <footer>
+    <button class="btn" id="openBtn">Open Full Dashboard</button>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
