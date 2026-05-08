@@ -19,6 +19,9 @@ backend/timetracker.db
 Thumbs.db
 desktop.ini
 
+# Claude Code local settings
+.claude/
+
 # Editor
 .vscode/
 .idea/
