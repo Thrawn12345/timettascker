@@ -1,4 +1,7 @@
 flask>=3.0
 flask-cors>=4.0
-pywin32>=306
-psutil>=5.9
+pywin32>=306; sys_platform == "win32"
+psutil>=5.9; sys_platform == "win32"
+psycopg2-binary>=2.9
+gunicorn>=21.2
+requests>=2.31

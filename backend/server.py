@@ -50,6 +50,23 @@ def timeline():
     return jsonify(database.get_hourly_breakdown(period))
 
 
+@app.route('/api/app', methods=['POST'])
+def receive_app():
+    """Accept a completed desktop app session from the local tracker (cloud mode)."""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'bad request'}), 400
+    try:
+        database.add_app_entry(
+            str(data.get('name', 'Unknown'))[:120],
+            float(data['start_time']),
+            float(data['end_time']),
+        )
+        return jsonify({'ok': True})
+    except (KeyError, ValueError) as e:
+        return jsonify({'error': str(e)}), 400
+
+
 @app.route('/api/phone', methods=['POST'])
 def receive_phone():
     """Accept app-usage data from the Android companion app."""

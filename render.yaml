@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: timetracker
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn --chdir backend cloud_main:app
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # paste your Neon / Supabase postgres URL here in the Render dashboard
+      - key: PYTHON_VERSION
+        value: "3.11.0"
